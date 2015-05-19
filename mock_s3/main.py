@@ -1,3 +1,5 @@
+#!/usr/bin/env python
+#coding=utf-8
 import argparse
 import logging
 import os
@@ -8,15 +10,18 @@ from SocketServer import ThreadingMixIn
 
 from actions import get_acl, get_item, list_buckets, ls_bucket
 from file_store import FileStore
+reload(sys)
+sys.setdefaultencoding("utf-8")
 
 
 logging.basicConfig(level=logging.INFO)
 
-
 class S3Handler(BaseHTTPRequestHandler):
     def do_GET(self):
         parsed_path = urlparse.urlparse(self.path)
+        print 'get self.path',self.path
         qs = urlparse.parse_qs(parsed_path.query, True)
+        print self.headers
         host = self.headers['host'].split(':')[0]
         path = parsed_path.path
         bucket_name = None
@@ -65,20 +70,33 @@ class S3Handler(BaseHTTPRequestHandler):
     def do_HEAD(self):
         return self.do_GET()
 
+    def do_POST(self):
+        return self.do_PUT()
+        
     def do_PUT(self):
+        print self.headers
         parsed_path = urlparse.urlparse(self.path)
+        print 'put self.path',self.path
+        print urlparse.urlunparse(parsed_path)
         qs = urlparse.parse_qs(parsed_path.query, True)
+        
+        #print 'copy_num ',int(qs["copy_num"][0])  
+        #print 'strip_num ',int(qs["strip_num"][0])
         host = self.headers['host'].split(':')[0]
+        print 'host',host
         path = parsed_path.path
+        print 'path',path
         bucket_name = None
         item_name = None
         req_type = None
 
         mock_hostname = self.server.mock_hostname
+        print 'mock_hostname',mock_hostname
+
         if host != mock_hostname and mock_hostname in host:
             idx = host.index(mock_hostname)
             bucket_name = host[:idx-1]
-
+        #print 'bucket_name',bucket_name
         if path == '/' and bucket_name:
             req_type = 'create_bucket'
 
@@ -110,7 +128,26 @@ class S3Handler(BaseHTTPRequestHandler):
             if not bucket:
                 # TODO: creating bucket for now, probably should return error
                 bucket = self.server.file_store.create_bucket(bucket_name)
-            item = self.server.file_store.store_item(bucket, item_name, self)
+            #print 'in main'
+            if 'copy_num' in qs:
+                try:
+                    copy_num=int(qs["copy_num"][0])
+                except:
+                    copy_num=1
+                
+            else:
+                copy_num=1
+            
+            if 'strip_num' in qs:
+                try:
+                    strip_num=int(qs["strip_num"][0])
+                except:
+                    strip_num=1
+            else:
+                strip_num=1
+            
+                
+            item = self.server.file_store.store_item(bucket, item_name, self,copy_num=copy_num,strip_num=strip_num)
             self.send_response(200)
             self.send_header('Etag', '"%s"' % item.md5)
 
@@ -133,11 +170,17 @@ class ThreadedHTTPServer(ThreadingMixIn, HTTPServer):
     def set_pull_from_aws(self, pull_from_aws):
         self.pull_from_aws = pull_from_aws
 
+    #def set_file_copy_num(self,file_copy_num):
+    #    self.file_copy_num=file_copy_num
+
+    #def set_file_strip_num(self,file_strip_num):
+    #    self.file_strip_num=file_strip_num
+
 
 def main(argv=sys.argv[1:]):
     parser = argparse.ArgumentParser(description='A Mock-S3 server.')
     parser.add_argument('--hostname', dest='hostname', action='store',
-                        default='localhost',
+                        default='',
                         help='Hostname to listen on.')
     parser.add_argument('--port', dest='port', action='store',
                         default=10001, type=int,

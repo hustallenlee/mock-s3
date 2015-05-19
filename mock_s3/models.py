@@ -25,3 +25,6 @@ class S3Item(object):
             self.creation_date = kwargs['creation_date']
         if 'modified_date' in kwargs:
             self.creation_date = kwargs['modified_date']
+        self.strip_num=kwargs['strip_num']
+        self.copy_num=kwargs['copy_num']
+        self.filename=kwargs['filename']
