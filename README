@@ -6,3 +6,10 @@ python setup.py install
 NOTE:
 As of July 2014 redis and jinja2 are no longer dependencies.
 For existing users I doubt there is a clean upgrade path.
+
+
+modified by allen lee allen_lee922@foxmail.com
+here are some improvements:
+    1.modify the file_store.py so that the big file can be receive
+    2.modify the file_store.py and make it multiple copies and multiple strips,        which is apparent to the use
+    3.users can write html to access the data in the bucket
